@@ -36,6 +36,7 @@
             <view class="hotspot-info">
               <text class="hotspot-title">{{ item.title }}</text>
               <view class="hotspot-meta">
+                <text v-if="item.hot_type" class="hot-type">{{ item.hot_type }}</text>
                 <text v-if="item.hot" class="hot-value">
                   🔥 {{ formatHotValue(item.hot) }}
                 </text>
@@ -330,6 +331,15 @@ function goBack() {
           display: flex;
           align-items: center;
           gap: $spacing-sm;
+          
+          .hot-type {
+            font-size: $font-size-xs;
+            color: #F53C5E;
+            font-weight: 600;
+            padding: 2rpx 8rpx;
+            background: rgba(245, 60, 94, 0.08);
+            border-radius: $radius-sm;
+          }
           
           .hot-value {
             font-size: $font-size-sm;

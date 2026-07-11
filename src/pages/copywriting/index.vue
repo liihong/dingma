@@ -28,7 +28,7 @@
       <view v-for="(msg, idx) in chatHistory" :key="idx" class="message-wrapper" :class="msg.role">
         <view v-if="msg.role === 'user'" class="message-row user-row">
           <view class="message-bubble user-bubble">
-            <text class="bubble-text">{{ msg.content }}</text>
+            <text class="bubble-text" selectable>{{ msg.content }}</text>
           </view>
           <view class="user-avatar">
             <image class="avatar-img" :src="userAvatarUrl" mode="aspectFill" />
@@ -40,8 +40,12 @@
             <SvgIcon name="agent" size="36" color="#fff" />
           </view>
           <view class="message-bubble assistant-bubble">
-            <text class="bubble-text">{{ msg.content }}</text>
+            <text class="bubble-text" selectable>{{ msg.content }}</text>
             <view class="bubble-actions">
+              <view class="action-item" @tap="saveToCopywritingLibrary(msg.content)">
+                <SvgIcon name="book" size="24" color="#999" />
+                <text class="action-label">加入文案库</text>
+              </view>
               <view class="action-item" @tap="copyMessage(msg.content)">
                 <SvgIcon name="edit" size="24" color="#999" />
                 <text class="action-label">复制文案话术</text>
@@ -130,6 +134,7 @@ import { fetchProjects } from '@/api/project'
 import { chatStream } from '@/api/generate'
 import { msgSecCheck } from '@/utils/security'
 import { getConversationDetail } from '@/api/conversation'
+import { createCopywritingEntry } from '@/api/copywritingLibrary'
 import { buildPersonaContextLabel, resolveChatProjectId } from '@/utils/persona'
 import SvgIcon from '@/components/base/SvgIcon.vue'
 import PersonaContextBar from '@/components/chat/PersonaContextBar.vue'
@@ -480,6 +485,36 @@ function copyMessage(content: string) {
   })
 }
 
+/** 将 AI 输出保存到当前 IP 文案库（草稿），便于二次修改与改状态 */
+async function saveToCopywritingLibrary(content: string) {
+  const projectId = resolveChatProjectId(projectStore.activeProject)
+  if (!projectId) {
+    uni.showToast({ title: '请先选择一个IP项目', icon: 'none' })
+    return
+  }
+
+  const text = (content || '').trim()
+  if (!text || text.startsWith('❌')) {
+    uni.showToast({ title: '无法保存该内容', icon: 'none' })
+    return
+  }
+
+  try {
+    uni.showLoading({ title: '保存中...' })
+    await createCopywritingEntry({
+      project_id: Number(projectId),
+      content: text,
+      status: 'draft',
+    })
+    uni.showToast({ title: '已加入文案库草稿', icon: 'success' })
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : '保存失败'
+    uni.showToast({ title: msg, icon: 'none' })
+  } finally {
+    uni.hideLoading()
+  }
+}
+
 interface PageOptions {
   agentId?: string
   label?: string
@@ -818,6 +853,7 @@ watch(
   .bubble-actions {
     display: flex;
     justify-content: flex-end;
+    gap: 12rpx;
     margin-top: 16rpx;
     padding-top: 12rpx;
     border-top: 1rpx solid $border-light;
